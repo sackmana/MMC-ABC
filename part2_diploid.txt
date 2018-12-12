@@ -1,0 +1,69 @@
+initialize() {
+	initializeMutationRate(0);
+	initializeMutationType(1,h,"f",s);
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, 0);
+	initializeRecombinationRate(0);
+		}
+1 {
+	sim.addSubpop("p1", N);
+	abra = outputtimesinit[1:(size(outputtimesinit)-1)]-outputtimesinit[0];
+	defineConstant("outputtimes",abra);
+	mmcgens = c(2:(max(outputtimes)+1));
+	defineConstant("mmcgens2",mmcgens);
+
+
+	for(gen in outputtimes[0:(size(outputtimes)-2)]){
+		sim.registerLateEvent(NULL,s1.source, gen, gen);}
+	sim.deregisterScriptBlock(s1);
+	if(psi!=0){
+	for(gen in mmcgens){
+
+		sim.registerEarlyEvent(NULL,s2.source, gen, gen);
+		sim.registerModifyChildCallback(NULL,s3.source,NULL,gen,gen);
+		sim.registerLateEvent(NULL,s4.source, gen, gen);
+		
+		}}
+
+	sim.deregisterScriptBlock(s2);
+	sim.deregisterScriptBlock(s3);
+	sim.deregisterScriptBlock(s4);
+	
+	for(gen in (max(outputtimes)+1)){
+		sim.registerLateEvent(NULL,s5.source,gen,gen);}
+	
+	sim.deregisterScriptBlock(s5);
+	target=sample(p1.genomes,startingfrequency);target.addNewDrawnMutation(1,0);
+}
+s1 2 late(){cat(sum(p1.individuals.countOfMutationsOfType(1))+size(p1.genomes)*(size(which(sim.substitutions.mutationType.id==1))));cat(',');}
+
+s2 2 early(){
+	sim.addSubpopSplit(2,1,p1);
+	p1.setMigrationRates(2, psi);
+	countingp1= N-round(N*(size(sim.subpopulations)-1)*psi);
+	countingother=round((N-countingp1)/(size(sim.subpopulations)-1));	
+	countingp1=countingp1+(N-(countingp1+(countingother*(size(sim.subpopulations)-1))));
+	for (thing in sim.subpopulations){
+		if(thing.id==1){thing.tag=asInteger(countingp1);}
+		else{thing.tag=asInteger(countingother);}};
+	}
+	
+s3 2 modifyChild(){
+	if(subpop.id==1){
+		if (sourceSubpop.id==1 & p1.tag==0){
+			return(F);}
+		else if (sourceSubpop.tag==0){
+			return(F);}
+		else{
+			sourceSubpop.tag=asInteger(sourceSubpop.tag-1);
+			return(T);}}
+	else{return(T);}
+}	
+	
+	
+s4 2 late(){
+	for(thing in sim.subpopulations){
+	if(thing.id!=1){thing.setSubpopulationSize(0);}}
+		}
+		
+s5 2 late(){cat(sum(p1.individuals.countOfMutationsOfType(1))+size(p1.genomes)*(size(which(sim.substitutions.mutationType.id==1))));}

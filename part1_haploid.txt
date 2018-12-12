@@ -1,0 +1,91 @@
+initialize() {
+	initializeMutationRate(0);
+	for(number in c(1:size(startfreqs))){initializeMutationType(number,1,"f",0);}
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, numsites*100);
+	initializeRecombinationRate(0);
+		}
+1 {
+	sim.addSubpop("p1", N);
+	p1.setCloningRate(1.0);
+	newmutationtimes = c(0,outputtimes[0:(size(outputtimes)-2)]);
+	defineConstant("newmutationtimes2",newmutationtimes);
+
+	mmcgens = c(2:(max(outputtimes)+1));
+	defineConstant("mmcgens2",mmcgens);
+
+
+	for(gen in outputtimes[0:(size(outputtimes)-2)]){
+		sim.registerLateEvent(NULL,s1.source, gen, gen);}
+	sim.deregisterScriptBlock(s1);
+	if(psi!=0){
+	for(gen in mmcgens){
+
+		sim.registerEarlyEvent(NULL,s2.source, gen, gen);
+		sim.registerModifyChildCallback(NULL,s3.source,NULL,gen,gen);
+		sim.registerLateEvent(NULL,s4.source, gen, gen);
+		
+		}}
+
+	sim.deregisterScriptBlock(s2);
+	sim.deregisterScriptBlock(s3);
+	sim.deregisterScriptBlock(s4);
+		
+	for(gen in (max(outputtimes)+1)){
+		sim.registerLateEvent(NULL,s5.source,gen,gen);}
+	
+	sim.deregisterScriptBlock(s5);
+	countinggens=1;
+	for(gen in newmutationtimes2[1:(size(newmutationtimes2)-2)]){if(numberpergeninput[countinggens]!=0){
+		sim.registerLateEvent(NULL,s6.source,gen,gen);};countinggens=countinggens+1;}
+	
+	sim.deregisterScriptBlock(s6);
+
+
+}
+2 late(){counter=0;
+	for(sitecount in startfreqs[0:(numberpergeninput[0]-1)]){target=sample(sim.subpopulations.individuals.genome1,sitecount);target.addNewDrawnMutation(counter+1,counter*100);counter=counter+1;}}
+
+
+s1 2 late(){for(number in c(1:size(startfreqs))){cat(sum(p1.individuals.countOfMutationsOfType(number))+size(p1.genomes)*(size(which(sim.substitutions.mutationType.id==number))));cat(',');}cat('\n');}
+
+s2 2 early(){
+	sim.addSubpopSplit(2,1,p1);
+	p2.setCloningRate(1.0);
+	p1.setMigrationRates(2, psi);
+	countingp1= N-round(N*(size(sim.subpopulations)-1)*psi);
+	countingother=round((N-countingp1)/(size(sim.subpopulations)-1));	
+	countingp1=countingp1+(N-(countingp1+(countingother*(size(sim.subpopulations)-1))));
+	for (thing in sim.subpopulations){
+		if(thing.id==1){thing.tag=asInteger(countingp1);}
+		else{thing.tag=asInteger(countingother);}};
+	}
+	
+s3 2 modifyChild(){
+	if(subpop.id==1){
+		if (sourceSubpop.id==1 & p1.tag==0){
+			return(F);}
+		else if (sourceSubpop.tag==0){
+			return(F);}
+		else{
+			sourceSubpop.tag=asInteger(sourceSubpop.tag-1);
+			return(T);}}
+	else{return(T);}
+}	
+	
+	
+s4 2 late(){
+	for(thing in sim.subpopulations){
+	if(thing.id!=1){thing.setSubpopulationSize(0);}}
+		}
+		
+s5 2 late(){for(number in c(1:size(startfreqs))){cat(sum(p1.individuals.countOfMutationsOfType(number))+size(p1.genomes)*(size(which(sim.substitutions.mutationType.id==number))));cat(',');};
+	cat('\n');}
+	
+s6 2 late(){counter3=0;
+	counter2=-2;
+	while(counter3==0){counter2=counter2+1;if(newmutationtimes2[counter2+1]==sim.generation)counter3=counter3+1;};
+	sumsofar=0;
+	if(counter2>-1){sumsofar=sum(numberpergeninput[0:counter2]);};
+	mutnumberer=sumsofar;
+	for(sitecount in startfreqs[sumsofar:(sumsofar+numberpergeninput[counter2+1]-1)]){target=sample(sim.subpopulations.individuals.genome1,sitecount);target.addNewDrawnMutation(mutnumberer+1,mutnumberer);mutnumberer=mutnumberer+1;}}
